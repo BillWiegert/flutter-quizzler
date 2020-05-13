@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
+import 'quiz_logic.dart';
+
+QuizLogic quizLogic = QuizLogic();
 
 void main() => runApp(Quizzler());
 
@@ -25,6 +29,108 @@ class QuizPage extends StatefulWidget {
 }
 
 class _QuizPageState extends State<QuizPage> {
+  List<Icon> scoreKeeper = generateEmptyScoreKeeper();
+  int correctAnswers = 0;
+
+//  List<Icon> scoreKeeper = () {
+//    List<Icon> result = [];
+//
+//    for (int i = 0; i < quizLogic.numQuestions(); i++) {
+//      result.add(placeholderIcon);
+//    }
+//
+//    return result;
+//  }();
+
+  static Icon correctIcon = Icon(
+    Icons.check,
+    color: Colors.green,
+  );
+
+  static Icon incorrectIcon = Icon(
+    Icons.close,
+    color: Colors.red,
+  );
+
+  static Icon placeholderIcon = Icon(
+    Icons.help_outline,
+    color: Colors.blue,
+  );
+
+  Alert createResultAlert() {
+    return Alert(
+      context: context,
+      title: 'Results',
+      desc:
+          'You answered $correctAnswers out of ${quizLogic.numQuestions()} questions correctly.',
+      type: AlertType.success,
+      buttons: [
+        DialogButton(
+          child: Text(
+            'RESET',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
+      closeFunction: () => {},
+    );
+  }
+
+  static List<Icon> generateEmptyScoreKeeper() {
+    List<Icon> result = [];
+
+    for (int i = 0; i < quizLogic.numQuestions(); i++) {
+      result.add(placeholderIcon);
+    }
+
+    return result;
+  }
+
+  void initializeScoreKeeper() {
+    scoreKeeper = generateEmptyScoreKeeper();
+  }
+
+  // Records answer and advances to next question. To be called after each answer is given
+  void answerQuestion(bool answer) {
+    recordScore(answer == quizLogic.getAnswer());
+    nextQuestion();
+  }
+
+  void recordScore(bool correct) {
+    setState(() {
+      scoreKeeper[quizLogic.currentQuestion()] =
+          correct ? correctIcon : incorrectIcon;
+
+      if (correct) {
+        correctAnswers++;
+      }
+    });
+  }
+
+  void nextQuestion() {
+    setState(() {
+      if (quizLogic.isFinished()) {
+        createResultAlert().show();
+        resetQuiz();
+      } else {
+        quizLogic.nextQuestion();
+      }
+    });
+  }
+
+  void resetQuiz() {
+    setState(() {
+      quizLogic.reset();
+      scoreKeeper = [];
+      initializeScoreKeeper();
+      correctAnswers = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -37,7 +143,7 @@ class _QuizPageState extends State<QuizPage> {
             padding: EdgeInsets.all(10.0),
             child: Center(
               child: Text(
-                'This is where the question text will go.',
+                quizLogic.getQuestionText(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 25.0,
@@ -62,6 +168,7 @@ class _QuizPageState extends State<QuizPage> {
               ),
               onPressed: () {
                 //The user picked true.
+                answerQuestion(true);
               },
             ),
           ),
@@ -80,18 +187,16 @@ class _QuizPageState extends State<QuizPage> {
               ),
               onPressed: () {
                 //The user picked false.
+                answerQuestion(false);
               },
             ),
           ),
         ),
-        //TODO: Add a Row here as your score keeper
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: scoreKeeper,
+        ),
       ],
     );
   }
 }
-
-/*
-question1: 'You can lead a cow down stairs but not up stairs.', false,
-question2: 'Approximately one quarter of human bones are in the feet.', true,
-question3: 'A slug\'s blood is green.', true,
-*/
